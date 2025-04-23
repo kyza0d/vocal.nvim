@@ -1,12 +1,12 @@
--- File: lua/transcribe/init.lua
+-- File: lua/vocal/init.lua
 local M = {}
-local recording = require("transcribe.recording")
-local ui = require("transcribe.ui")
-local api = require("transcribe.api")
-local buffer = require("transcribe.buffer")
+local recording = require("vocal.recording")
+local ui = require("vocal.ui")
+local api = require("vocal.api")
+local buffer = require("vocal.buffer")
 
 -- Load default configuration
-M.config = require("transcribe.config")
+M.config = require("vocal.config")
 
 -- Cache for the resolved API key
 local resolved_api_key = nil
@@ -98,6 +98,31 @@ local function stop_spinner()
 	end
 end
 
+-- Add this function to handle file deletion
+local function delete_recording_file(filename)
+	-- Check if file exists
+	if vim.fn.filereadable(filename) ~= 1 then
+		return false
+	end
+
+	-- Delete the file
+	local success, error_msg = os.remove(filename)
+	if not success then
+		if api.debug_mode then
+			local debug_log = function(msg)
+				local file = io.open(api.log_file, "a")
+				if file then
+					file:write("[" .. os.date("%Y-%m-%d %H:%M:%S") .. "] " .. msg .. "\n")
+					file:close()
+				end
+			end
+			debug_log("Failed to delete recording file: " .. (error_msg or "unknown error"))
+		end
+		return false
+	end
+	return true
+end
+
 -- Process recording with Whisper API
 local function process_recording(filename)
 	local api_key = resolve_api_key()
@@ -118,7 +143,16 @@ local function process_recording(filename)
 		-- Insert text into buffer
 		buffer.insert_text(text)
 
-		show_status("🎙️ Transcription complete", 3000)
+		-- Delete recording file if configured to do so
+		if M.config.delete_recordings then
+			if delete_recording_file(filename) then
+				show_status("🎙️ Transcription complete (recording deleted)", 3000)
+			else
+				show_status("🎙️ Transcription complete", 3000)
+			end
+		else
+			show_status("🎙️ Transcription complete", 3000)
+		end
 	end, function(error_msg)
 		-- Error callback
 		stop_spinner()
@@ -127,7 +161,7 @@ local function process_recording(filename)
 		-- Additional guidance for common errors
 		if error_msg:match("API error") then
 			vim.defer_fn(function()
-				show_info("Enable debug mode with :TranscribeDebug")
+				show_info("Enable debug mode with :VocalDebug")
 			end, 1000)
 		end
 	end)
@@ -143,37 +177,37 @@ function M.setup(opts)
 		api.set_options(opts.api)
 	end
 
-	-- Define the :Transcribe command
-	vim.api.nvim_create_user_command("Transcribe", M.transcribe, {
+	-- Define the :Vocal command
+	vim.api.nvim_create_user_command("Vocal", M.transcribe, {
 		range = true,
 		desc = "Record audio and transcribe using OpenAI Whisper API",
 	})
 
 	-- Register debug commands
-	vim.api.nvim_create_user_command("TranscribeDebug", function()
+	vim.api.nvim_create_user_command("VocalDebug", function()
 		api.enable_debug()
 	end, {
-		desc = "Enable debug mode for Transcribe plugin",
+		desc = "Enable debug mode for Vocal plugin",
 	})
 
-	vim.api.nvim_create_user_command("TranscribeNoDebug", function()
+	vim.api.nvim_create_user_command("VocalNoDebug", function()
 		api.disable_debug()
 	end, {
-		desc = "Disable debug mode for Transcribe plugin",
+		desc = "Disable debug mode for Vocal plugin",
 	})
 
-	vim.api.nvim_create_user_command("TranscribeOpenLog", function()
+	vim.api.nvim_create_user_command("VocalOpenLog", function()
 		if vim.fn.filereadable(api.log_file) == 1 then
 			vim.cmd("edit " .. api.log_file)
 		else
 			show_error("Log file does not exist yet")
 		end
 	end, {
-		desc = "Open the Transcribe debug log file",
+		desc = "Open the Vocal debug log file",
 	})
 
 	-- Add a test command to verify API connectivity
-	vim.api.nvim_create_user_command("TranscribeTestAPI", function()
+	vim.api.nvim_create_user_command("VocalTestAPI", function()
 		local api_key = resolve_api_key()
 		if not api_key then
 			show_error("No API key found")
@@ -244,7 +278,7 @@ function M.setup(opts)
 	})
 end
 
--- Handle the :Transcribe command
+-- Handle the :Vocal command
 function M.transcribe(cmd_opts)
 	-- Check for API key
 	local api_key = resolve_api_key()
@@ -311,3 +345,4 @@ function M.get_recording_filename()
 end
 
 return M
+

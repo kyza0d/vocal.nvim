@@ -3,7 +3,7 @@ local Job = require("plenary.job")
 local M = {}
 
 local active_job = nil
-local active_filename = nil
+M.active_filename = nil
 
 function M.is_recording()
 	return active_job ~= nil and not active_job.is_shutdown
@@ -17,7 +17,7 @@ function M.start_recording(recording_dir, on_start, on_error, on_stop)
 
 	local timestamp = os.time()
 	local filename = string.format("%s/recording_%d.wav", recording_dir, timestamp)
-	active_filename = filename
+	M.active_filename = filename
 
 	active_job = Job:new({
 		command = "bash",
@@ -52,7 +52,11 @@ function M.stop_recording()
 		active_job = nil
 	end
 
-	return active_filename
+	return M.active_filename
+end
+
+function M.get_recording_filename()
+	return M.active_filename
 end
 
 return M

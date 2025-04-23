@@ -1,4 +1,4 @@
--- File: lua/transcribe/ui.lua
+-- File: lua/vocal/ui.lua
 local M = {}
 
 -- Status window state
@@ -25,7 +25,7 @@ function M.create_status_window()
 	vim.api.nvim_buf_set_option(status_buf, "bufhidden", "wipe")
 	vim.api.nvim_buf_set_option(status_buf, "buftype", "nofile")
 	vim.api.nvim_buf_set_option(status_buf, "swapfile", false)
-	vim.api.nvim_buf_set_option(status_buf, "filetype", "transcribe-status")
+	vim.api.nvim_buf_set_option(status_buf, "filetype", "vocal-status")
 
 	-- Calculate position (bottom right)
 	local width = default_width
@@ -53,19 +53,15 @@ function M.create_status_window()
 
 	-- Make window visible with proper highlighting
 	vim.api.nvim_win_set_option(status_win, "winblend", 0) -- Remove transparency
-	vim.api.nvim_win_set_option(
-		status_win,
-		"winhighlight",
-		"Normal:TranscribeStatus,FloatBorder:TranscribeStatusBorder"
-	)
+	vim.api.nvim_win_set_option(status_win, "winhighlight", "Normal:VocalStatus,FloatBorder:VocalStatusBorder")
 
 	-- Add default highlighting if not already defined
-	if vim.fn.hlexists("TranscribeStatus") == 0 then
-		vim.api.nvim_set_hl(0, "TranscribeStatus", { bg = "#2a2a2a", fg = "#ffffff" })
+	if vim.fn.hlexists("VocalStatus") == 0 then
+		vim.api.nvim_set_hl(0, "VocalStatus", { bg = "#2a2a2a", fg = "#ffffff" })
 	end
 
-	if vim.fn.hlexists("TranscribeStatusBorder") == 0 then
-		vim.api.nvim_set_hl(0, "TranscribeStatusBorder", { bg = "#2a2a2a", fg = "#2a2a2a" })
+	if vim.fn.hlexists("VocalStatusBorder") == 0 then
+		vim.api.nvim_set_hl(0, "VocalStatusBorder", { bg = "#2a2a2a", fg = "#2a2a2a" })
 	end
 
 	-- Set initial content to make sure something is visible
@@ -188,7 +184,7 @@ function M.create_recording_popup(on_stop, on_cancel)
 		col = col,
 		style = "minimal",
 		border = "single",
-		title = "Transcribe Recording",
+		title = "Vocal Recording",
 		title_pos = "center",
 	})
 
@@ -218,3 +214,4 @@ function M.create_recording_popup(on_stop, on_cancel)
 end
 
 return M
+

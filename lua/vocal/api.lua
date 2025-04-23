@@ -4,7 +4,7 @@ local Job = require("plenary.job")
 
 local M = {
 	debug_mode = false, -- Set to true to enable verbose logging
-	log_file = os.getenv("HOME") .. "/.cache/transcribe.log",
+	log_file = os.getenv("HOME") .. "/.cache/vocal.log",
 }
 
 -- Configure API request options
@@ -233,7 +233,7 @@ function M.enable_debug()
 		file:close()
 	end
 
-	vim.notify("Transcribe plugin debug mode enabled - Logging to " .. M.log_file, vim.log.levels.INFO)
+	vim.notify("Vocal plugin debug mode enabled - Logging to " .. M.log_file, vim.log.levels.INFO)
 end
 
 -- Disable debug mode
@@ -248,7 +248,7 @@ function M.disable_debug()
 	end
 
 	M.debug_mode = false
-	vim.notify("Transcribe plugin debug mode disabled", vim.log.levels.INFO)
+	vim.notify("Vocal plugin debug mode disabled", vim.log.levels.INFO)
 end
 
 return M

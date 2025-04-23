@@ -1,7 +1,7 @@
--- Default configuration for the transcribe plugin
 local config = {
 	api_key = nil,
 	recording_dir = os.getenv("HOME") and (os.getenv("HOME") .. "/recordings") or "/tmp/recordings",
+	delete_recordings = true, -- Delete recordings after transcription by default
 
 	-- API configuration
 	api = {
@@ -14,3 +14,4 @@ local config = {
 }
 
 return config
+

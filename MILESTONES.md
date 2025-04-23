@@ -1,7 +1,7 @@
 # MILESTONES
 
 ## Plugin Brief
-The `transcribe.nvim` plugin is a lightweight Neovim plugin designed to provide seamless speech-to-text transcription using the OpenAI Whisper API. It enables users to record audio directly within Neovim, send it to the OpenAI Whisper API for transcription, and insert the transcribed text into the current buffer. The plugin aims to be simple, cross-platform, and user-friendly, leveraging server-based transcription for broad compatibility.
+The `vocal.nvim` plugin is a lightweight Neovim plugin designed to provide seamless speech-to-text transcription using the OpenAI Whisper API. It enables users to record audio directly within Neovim, send it to the OpenAI Whisper API for transcription, and insert the transcribed text into the current buffer. The plugin aims to be simple, cross-platform, and user-friendly, leveraging server-based transcription for broad compatibility.
 
 - **Key Features**:
   - Record audio using `sox` with a configurable storage directory.
@@ -14,6 +14,7 @@ The `transcribe.nvim` plugin is a lightweight Neovim plugin designed to provide 
   - [x] Phase 1: Configuration and command setup completed.
   - [x] Phase 2: Recording functionality implemented with UX fixes.
   - [x] Phase 3: API integration and text insertion completed.
+  - [x] Phase 4: Documentation completed.
 
 ## Context of Plugin and Goals
 The plugin was inspired by `whisper.lua` from `gp.nvim`, which provides speech-to-text functionality but includes unwanted features, and `murmur.nvim`, which uses a local whisper.cpp server, limiting cross-platform compatibility. The goal is to create a standalone plugin that:
@@ -36,11 +37,11 @@ The plugin was inspired by `whisper.lua` from `gp.nvim`, which provides speech-t
 - The plugin is developed iteratively, with each phase building on the previous one to ensure a stable foundation.
 
 ## Plugin Architecture
-The plugin is structured under `lua/transcribe/` with a modular design for maintainability and extensibility. It leverages Neovim's Lua API and `plenary.nvim` for asynchronous operations. The architecture is inspired by `whisper.lua` but simplified to focus on OpenAI Whisper API integration.
+The plugin is structured under `lua/vocal/` with a modular design for maintainability and extensibility. It leverages Neovim's Lua API and `plenary.nvim` for asynchronous operations. The architecture is inspired by `whisper.lua` but simplified to focus on OpenAI Whisper API integration.
 
 **Directory Structure**:
-- `lua/transcribe/`
-  - `init.lua`: Main entry point, handles setup and the `:Transcribe` command.
+- `lua/vocal/`
+  - `init.lua`: Main entry point, handles setup and the `:Vocal` command.
   - `config.lua`: Defines default and user-configurable settings.
   - `recording.lua`: Manages audio recording with `sox` and `plenary.job`.
   - `ui.lua`: Provides a popup interface for recording control.
@@ -51,7 +52,7 @@ The plugin is structured under `lua/transcribe/` with a modular design for maint
 - **Configuration**: Managed via `config.lua`, allowing users to set `api_key` and `recording_dir`.
 - **Recording**: Handled by `recording.lua`, using `sox` with asynchronous job management.
 - **UI**: Implemented in `ui.lua`, displaying a popup with status and keybindings.
-- **Command**: The `:Transcribe` command in `init.lua` orchestrates recording, API calls, and text insertion.
+- **Command**: The `:Vocal` command in `init.lua` orchestrates recording, API calls, and text insertion.
 
 **Dependencies**:
 - `plenary.nvim`: For asynchronous job management.
@@ -62,16 +63,16 @@ The plugin is structured under `lua/transcribe/` with a modular design for maint
 - Allow advanced configuration (e.g., language, model).
 
 ## Phase 1 Implementations
-**Objective**: Set up the plugin's foundation with configuration and the `:Transcribe` command.
+**Objective**: Set up the plugin's foundation with configuration and the `:Vocal` command.
 
 **Files**:
-- `lua/transcribe/init.lua`
-- `lua/transcribe/config.lua`
+- `lua/vocal/init.lua`
+- `lua/vocal/config.lua`
 
 **Completed**:
 - [x] Defined default configuration in `config.lua` with `api_key` option.
 - [x] Implemented `setup` function in `init.lua` to merge user options.
-- [x] Created `:Transcribe` command that checks for API key.
+- [x] Created `:Vocal` command that checks for API key.
 - [x] Supported pulling `OPENAI_API_KEY` from environment variables.
 - [x] Added support for `api_key` as a string or command (table) for flexibility.
 - [x] Provided error feedback if API key is missing.
@@ -87,10 +88,10 @@ The plugin is structured under `lua/transcribe/` with a modular design for maint
 **Objective**: Implement audio recording with a user-friendly interface, allowing users to start, stop, and save recordings.
 
 **Files**:
-- `lua/transcribe/config.lua` (updated)
-- `lua/transcribe/init.lua` (updated)
-- `lua/transcribe/recording.lua` (new)
-- `lua/transcribe/ui.lua` (new)
+- `lua/vocal/config.lua` (updated)
+- `lua/vocal/init.lua` (updated)
+- `lua/vocal/recording.lua` (new)
+- `lua/vocal/ui.lua` (new)
 
 **Completed**:
 - [x] Added `recording_dir` to `config.lua`, defaulting to `/tmp`.
@@ -99,7 +100,7 @@ The plugin is structured under `lua/transcribe/` with a modular design for maint
 - [x] Provided error feedback for missing `sox` or recording failures.
 - [x] Ensured asynchronous operation with `plenary.nvim`.
 - [x] Added `ui.lua` for a popup interface with `<Enter>` to stop and `<Esc>` to cancel.
-- [x] Handled subsequent `:Transcribe` calls to stop recording and notify `󰠘 Recording saved`.
+- [x] Handled subsequent `:Vocal` calls to stop recording and notify `󰠘 Recording saved`.
 - [x] Configured `sox` to use the default OS input device (`-d` flag).
 - [x] Used `-t wav` to ensure proper WAV format for recordings.
 
@@ -110,27 +111,27 @@ The plugin is structured under `lua/transcribe/` with a modular design for maint
 **Objective**: Integrate OpenAI Whisper API to transcribe recordings and insert text into the buffer.
 
 **Files**:
-- `lua/transcribe/init.lua` (updated)
-- `lua/transcribe/api.lua` (implemented)
-- `lua/transcribe/buffer.lua` (implemented)
+- `lua/vocal/init.lua` (updated)
+- `lua/vocal/api.lua` (implemented)
+- `lua/vocal/buffer.lua` (implemented)
 
 **Completed**:
 - [x] Implemented `api.lua` with OpenAI Whisper API integration using `plenary.job` and curl.
 - [x] Added comprehensive error handling (API key validation, network errors, empty responses).
 - [x] Created `buffer.lua` with text insertion functions for normal and visual modes.
 - [x] Added spinner progress indicator during API processing with visual feedback.
-- [x] Updated `:Transcribe` command to chain recording, API call, and text insertion.
+- [x] Updated `:Vocal` command to chain recording, API call, and text insertion.
 - [x] Implemented debug logging system with commands:
-  - `:TranscribeDebug` - Enable debug mode
-  - `:TranscribeNoDebug` - Disable debug mode
-  - `:TranscribeOpenLog` - Open debug log file
-  - `:TranscribeTestAPI` - Test API connectivity
+  - `:VocalDebug` - Enable debug mode
+  - `:VocalNoDebug` - Disable debug mode
+  - `:VocalOpenLog` - Open debug log file
+  - `:VocalTestAPI` - Test API connectivity
 - [x] Added API key validation with format checking.
 - [x] Implemented proper cleanup of text (whitespace trimming, line ending normalization).
 - [x] Tested with various audio inputs and edge cases.
 
 **Pending**:
-- [ ] Document usage in `doc/transcribe.txt`.
+- None.
 
 **Notes**:
 - Phase 3 successfully completed the core functionality, enabling end-to-end speech-to-text.
@@ -141,33 +142,38 @@ The plugin is structured under `lua/transcribe/` with a modular design for maint
 **Objective**: Complete documentation and add finishing touches to the plugin.
 
 **Files**:
-- `README.md` (to be created/updated)
-- `doc/transcribe.txt` (new)
-- `lua/transcribe/init.lua` (minor updates)
+- `README.md` (created)
+- `doc/vocal.txt` (created)
+- `lua/vocal/init.lua` (minor updates)
 
-**Tasks**:
-- [ ] Create comprehensive documentation in `doc/transcribe.txt` with:
+**Completed**:
+- [x] Created comprehensive documentation in `doc/vocal.txt` with:
   - Installation instructions
   - Configuration options
   - Command usage
   - Troubleshooting guide
-- [ ] Write detailed README.md with:
+- [x] Written detailed README.md with:
   - Plugin overview and features
   - Quick start guide
   - Configuration examples
   - Dependencies and requirements
+
+**Pending**:
 - [ ] Add health check function for debugging
 - [ ] Add support for custom keymappings
 - [ ] Consider adding tests using `plenary.test`
 
+**Notes**:
+- Documentation provides clear and concise instructions for users
+- README offers a quick overview while the help file provides comprehensive details
+- Both documents follow Neovim plugin conventions without unnecessary verbosity
+
 **Future Enhancements**:
+- [x] Delete recordings automatically (optional)
 - [ ] Support for additional recording tools (e.g., `ffmpeg`)
 - [ ] Language auto-detection configuration
 - [ ] Multiple model support
 - [ ] Prompt configuration for Whisper API
-- [ ] Cancel recording via `:Transcribe` while popup is open
-- [ ] Save recordings permanently (optional)
+- [ ] Cancel recording via `:Vocal` while popup is open
 - [ ] Support for longer recordings with chunking
-- [ ] Local Whisper model support as alternative to API
-
-This is a test, please.
+- [ ] Local Whisper model support as Alternative to API
