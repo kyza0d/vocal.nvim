@@ -64,6 +64,11 @@ require("vocal").setup({
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim): Required for asynchronous operations
 - `sox`: Command-line audio recording utility (must be installed separately)
 
+This plugin was inspired by the following projects:
+
+- [murmur.nvim](https://github.com/mecattaf/murmur.nvim)
+- [gp.nvim](https://github.com/Robitx/gp.nvim)
+
 ## License
 
 MIT
