@@ -37,7 +37,7 @@ The following are required to use vocal.nvim:
 Using lazy.nvim:
 >lua
     {
-      "kyza/vocal.nvim",
+      "kyza0d/vocal.nvim",
       dependencies = {
         "nvim-lua/plenary.nvim",
       },

@@ -27,7 +27,7 @@ A lightweight Neovim plugin for speech-to-text transcription using the OpenAI Wh
 
 ```lua
 {
-  "kyza/vocal.nvim",
+  "kyza0d/vocal.nvim",
   dependencies = {
     "nvim-lua/plenary.nvim",
   },
