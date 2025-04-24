@@ -1,4 +1,3 @@
----@diagnostic disable: missing-fields
 local Job = require("plenary.job")
 local M = {}
 
@@ -11,8 +10,15 @@ end
 
 function M.start_recording(recording_dir, on_start, on_error, on_stop)
 	if vim.fn.executable("sox") == 0 then
-		on_error("sox is not installed. Please install sox to record audio.")
+		if on_error then
+			on_error("sox is not installed. Please install sox to record audio.")
+		end
 		return
+	end
+
+	-- Ensure recording directory exists
+	if vim.fn.isdirectory(recording_dir) == 0 then
+		vim.fn.mkdir(recording_dir, "p")
 	end
 
 	local timestamp = os.time()
@@ -26,14 +32,21 @@ function M.start_recording(recording_dir, on_start, on_error, on_stop)
 			string.format("exec sox -q -c 1 -r 44100 -d %s trim 0 3600", vim.fn.shellescape(filename)),
 		},
 		on_start = function(_)
-			on_start(filename)
+			if on_start then
+				on_start(filename)
+			end
 		end,
 		on_exit = function(_, return_val)
 			active_job = nil
 			if return_val == 0 or return_val == 143 or return_val == 130 then
-				on_stop(filename)
+				-- Only call on_stop if it's provided
+				if on_stop then
+					on_stop(filename)
+				end
 			else
-				on_error("Recording failed with exit code: " .. return_val)
+				if on_error then
+					on_error("Recording failed with exit code: " .. return_val)
+				end
 			end
 		end,
 	})
@@ -60,4 +73,3 @@ function M.get_recording_filename()
 end
 
 return M
-

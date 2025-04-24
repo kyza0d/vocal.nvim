@@ -1,4 +1,4 @@
-*vocal.txt*  Speech-to-text transcription using OpenAI Whisper API
+*vocal.txt*  Speech-to-text transcription using OpenAI Whisper API or local models
 
 ===============================================================================
 CONTENTS                                                          *vocal-contents*
@@ -9,7 +9,7 @@ CONTENTS                                                          *vocal-content
     4. Configuration ................... |vocal-configuration|
     5. Usage ........................... |vocal-usage|
     6. Commands ........................ |vocal-commands|
-    7. API Configuration ............... |vocal-api-config|
+    7. Transcription Options ........... |vocal-transcription|
     8. Troubleshooting ................. |vocal-troubleshooting|
     9. License ......................... |vocal-license|
 
@@ -17,9 +17,9 @@ CONTENTS                                                          *vocal-content
 1. INTRODUCTION                                               *vocal-introduction*
 
 vocal.nvim is a lightweight Neovim plugin that provides speech-to-text
-functionality using the OpenAI Whisper API. It enables users to record audio
-directly within Neovim, send it to the OpenAI Whisper API for transcription,
-and insert the transcribed text into the current buffer.
+functionality using either the OpenAI Whisper API or local Whisper models.
+It enables users to record audio directly within Neovim, transcribe it,
+and insert the resulting text into the current buffer.
 
 ===============================================================================
 2. REQUIREMENTS                                               *vocal-requirements*
@@ -29,7 +29,12 @@ The following are required to use vocal.nvim:
 - Neovim 0.11.0 or higher
 - plenary.nvim library
 - sox (Sound eXchange) for audio recording
+
+For API transcription:
 - OpenAI API key
+
+For local transcription:
+- Python with the openai-whisper package installed (`pip install openai-whisper`)
 
 ===============================================================================
 3. INSTALLATION                                               *vocal-installation*
@@ -64,10 +69,19 @@ vocal.nvim can be configured by passing a table to the setup function:
       -- Delete recordings after transcription
       delete_recordings = true,
       
-      -- API configuration
+      -- Keybinding to trigger :Vocal (set to nil to disable)
+      keymap = "<leader>v",
+      
+      -- Local model configuration (set this to use local model instead of API)
+      local_model = {
+        model = "base",         -- Model size: tiny, base, small, medium, large
+        path = "~/whisper",     -- Path to download and store models
+      },
+      
+      -- API configuration (used only when local_model is not set)
       api = {
         model = "whisper-1",
-        language = nil, -- Auto-detect language
+        language = nil,         -- Auto-detect language
         response_format = "json",
         temperature = 0,
         timeout = 60,
@@ -89,14 +103,20 @@ Configuration Options:                                     *vocal-config-options
   delete_recordings (boolean)           Whether to delete recordings after
                     transcription. Default: true
 
+  keymap            (string|nil)        Keybinding to trigger the :Vocal command
+                    Default: "<leader>v" (set to nil to disable)
+
+  local_model       (table|nil)         Configuration for local Whisper model
+                    Set to nil to use the OpenAI API instead
+
 ===============================================================================
 5. USAGE                                                            *vocal-usage*
 
 Basic workflow:
 
-1. Start recording with the `:Vocal` command
+1. Start recording with the `:Vocal` command or configured keymap
 2. Speak into your microphone
-3. Press Enter to stop recording and transcribe
+3. Run `:Vocal` again to stop recording and transcribe
 4. The transcribed text will be inserted at your cursor position
 
 In visual mode, transcribed text will replace the selected text.
@@ -104,31 +124,42 @@ In visual mode, transcribed text will replace the selected text.
 ===============================================================================
 6. COMMANDS                                                      *vocal-commands*
 
-:Vocal                  Start or stop audio recording
-                        When started, a popup will appear with instructions
-
-:VocalDebug             Enable debug mode for troubleshooting
-                        Creates a log file at ~/.cache/vocal.log
-
-:VocalNoDebug           Disable debug mode
-
-:VocalOpenLog           Open the debug log file
-
-:VocalTestAPI           Test API connectivity with your configured API key
+:Vocal                  Start or stop audio recording and transcription
+                        When started, a status indicator will show recording state
+                        When stopped, the plugin will automatically transcribe the audio
 
 ===============================================================================
-7. API CONFIGURATION                                            *vocal-api-config*
+7. TRANSCRIPTION OPTIONS                                    *vocal-transcription*
 
-Advanced API options can be configured in the api table:
+vocal.nvim supports two methods of transcription:
+
+1. OpenAI Whisper API (requires API key)
+   Configure using the api table:
 >lua
     api = {
-      model = "whisper-1",        -- Whisper model to use
+      model = "whisper-1",        -- Whisper API model
       language = nil,             -- Language code or nil for auto-detection
       response_format = "json",   -- API response format
       temperature = 0,            -- Sampling temperature (0-1)
       timeout = 60,               -- Timeout in seconds
     }
 <
+
+2. Local Whisper Model (requires Python with openai-whisper package)
+   Configure using the local_model table:
+>lua
+    local_model = {
+      model = "base",             -- Model size: tiny, base, small, medium, large
+      path = "~/whisper",         -- Path to download and store models
+    }
+<
+   The local model will be automatically downloaded if not present.
+   Model sizes and approximate memory requirements:
+   - tiny: ~75MB
+   - base: ~150MB
+   - small: ~500MB
+   - medium: ~1.5GB
+   - large: ~3GB
 
 ===============================================================================
 8. TROUBLESHOOTING                                         *vocal-troubleshooting*
@@ -141,12 +172,13 @@ Common issues:
   - Windows: Install through chocolatey or directly
 
 - "API key not found": Set your OpenAI API key in the configuration or
-  as the OPENAI_API_KEY environment variable
+  as the OPENAI_API_KEY environment variable (only needed for API transcription)
+
+- "Python package not found": Install the openai-whisper package with
+  `pip install openai-whisper` (only needed for local transcription)
 
 - Recording issues: Check that your microphone is working and properly configured
   in your operating system
-
-- For detailed logs: Run `:VocalDebug` to enable logging
 
 ===============================================================================
 9. LICENSE                                                        *vocal-license*

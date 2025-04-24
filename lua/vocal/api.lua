@@ -1,110 +1,94 @@
----@diagnostic disable: missing-fields
-local curl = require("plenary.curl") -- We'll use this in a future implementation
-local Job = require("plenary.job")
+local curl = require("plenary.curl")
 
 local M = {
-	debug_mode = false, -- Set to true to enable verbose logging
+	debug_mode = true,
 	log_file = os.getenv("HOME") .. "/.cache/vocal.log",
 }
 
--- Configure API request options
 M.options = {
-	model = "whisper-1", -- Default Whisper model
-	language = nil, -- Auto-detect language by default
-	response_format = "json", -- Return JSON response
-	temperature = 0, -- Lower temperature for more deterministic outputs
-	timeout = 60, -- Timeout in seconds
+	model = "whisper-1",
+	language = nil,
+	response_format = "json",
+	temperature = 0,
+	timeout = 60,
 }
 
--- Validate API key format
----@param api_key string The API key to validate
----@return boolean is_valid
----@return string? error_message
 local function validate_api_key(api_key)
 	if not api_key or api_key == "" then
 		return false, "API key is empty"
 	end
-
-	-- Most OpenAI API keys start with "sk-" and have a specific length
 	if not api_key:match("^sk%-") then
 		return false, "API key does not have the expected format (should start with 'sk-')"
 	end
-
-	-- Basic length check (OpenAI keys are typically longer than 30 chars)
 	if #api_key < 30 then
 		return false, "API key appears to be too short"
 	end
-
 	return true, nil
 end
 
--- Debug log function that writes to file when debug_mode is enabled
-local function debug_log(...)
-	if M.debug_mode then
-		local args = { ... }
-		local str_args = {}
-		for i, arg in ipairs(args) do
-			if type(arg) == "table" then
-				str_args[i] = vim.inspect(arg)
-			else
-				str_args[i] = tostring(arg)
-			end
-		end
-
-		-- Create timestamp
-		local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-		local log_message = "[" .. timestamp .. "] " .. table.concat(str_args, " ") .. "\n"
-
-		-- Ensure the directory exists
-		local cache_dir = vim.fn.fnamemodify(M.log_file, ":h")
-		if vim.fn.isdirectory(cache_dir) == 0 then
-			vim.fn.mkdir(cache_dir, "p")
-		end
-
-		-- Append to log file
-		local file = io.open(M.log_file, "a")
-		if file then
-			file:write(log_message)
-			file:close()
-		end
+function M.debug_log(...)
+	if not M.debug_mode then
+		return
+	end
+	local args = { ... }
+	local str_args = {}
+	for i, arg in ipairs(args) do
+		str_args[i] = type(arg) == "table" and vim.inspect(arg) or tostring(arg)
+	end
+	local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+	local log_message = "[" .. timestamp .. "] " .. table.concat(str_args, " ") .. "\n"
+	local cache_dir = vim.fn.fnamemodify(M.log_file, ":h")
+	if vim.fn.isdirectory(cache_dir) == 0 then
+		vim.fn.mkdir(cache_dir, "p")
+	end
+	local file = io.open(M.log_file, "a")
+	if file then
+		file:write(log_message)
+		file:close()
 	end
 end
 
--- Send audio file to Whisper API for transcription
----@param filename string Path to the audio file
----@param api_key string OpenAI API key
----@param on_success function Callback for successful transcription
----@param on_error function Callback for errors
-function M.transcribe(filename, api_key, on_success, on_error)
-	-- Log debug session start
-	debug_log("======== NEW TRANSCRIPTION REQUEST ========")
+function M.resolve_api_key(config_key)
+	if config_key == nil then
+		local env_key = os.getenv("OPENAI_API_KEY")
+		if env_key and env_key:match("^%s*(.-)%s*$") ~= "" then
+			return env_key:match("^%s*(.-)%s*$")
+		end
+	elseif type(config_key) == "string" then
+		return config_key:match("^%s*(.-)%s*$")
+	elseif type(config_key) == "table" then
+		local cmd, args = config_key[1], { unpack(config_key, 2) }
+		local output = vim.fn.systemlist({ cmd, unpack(args) })
+		if vim.v.shell_error == 0 and #output > 0 then
+			return output[1]:gsub("^%s*(.-)%s*$", "%1")
+		end
+	end
+	return nil
+end
 
-	-- Validate inputs
+function M.transcribe(filename, api_key, on_success, on_error)
+	M.debug_log("======== NEW TRANSCRIPTION REQUEST ========")
 	if not filename or not api_key then
 		local error_msg = "Missing filename or API key"
-		debug_log("Error: " .. error_msg)
+		M.debug_log("Error: " .. error_msg)
 		on_error(error_msg)
 		return
 	end
-
-	-- Check if file exists
 	if vim.fn.filereadable(filename) ~= 1 then
 		local error_msg = "Audio file not found: " .. filename
-		debug_log("Error: " .. error_msg)
+		M.debug_log("Error: " .. error_msg)
 		on_error(error_msg)
 		return
 	end
-
-	-- Validate API key format
 	local key_valid, key_error = validate_api_key(api_key)
 	if not key_valid then
 		local error_msg = "Invalid API key: " .. key_error
-		debug_log("Error: " .. error_msg)
+		M.debug_log("Error: " .. error_msg)
 		on_error(error_msg)
 		return
 	end
 
-	-- Prepare API options
+	-- Create request_options from M.options
 	local request_options = {}
 	for k, v in pairs(M.options) do
 		if v ~= nil then
@@ -112,133 +96,140 @@ function M.transcribe(filename, api_key, on_success, on_error)
 		end
 	end
 
-	-- Log API request attempt (without showing the full key)
-	debug_log("Attempting API request with key: " .. api_key:sub(1, 5) .. "..." .. api_key:sub(-4))
-	debug_log("File: " .. filename)
-	debug_log("Options: ", request_options)
+	M.debug_log("Attempting API request with key: " .. api_key:sub(1, 5) .. "..." .. api_key:sub(-4))
+	M.debug_log("File: " .. filename, "Options: ", request_options)
 
-	-- Prepare curl command with proper escaping for the Authorization header
-	local curl_cmd = {
-		"curl",
-		"-v", -- Verbose output for debugging
-		"-s", -- Silent mode (no progress bar)
-		"-X",
+	-- Prepare raw curl arguments for multipart form request
+	local curl_args = {
+		"--silent",
+		"--show-error",
+		"--request",
 		"POST",
-		"-H",
+		"--header",
 		"Authorization: Bearer " .. api_key,
-		"-H",
-		"Content-Type: multipart/form-data",
-		"-F",
+		"--form",
 		"file=@" .. filename,
-		"-F",
+		"--form",
 		"model=" .. request_options.model,
+		"--form",
+		"response_format=" .. request_options.response_format,
+		"--form",
+		"temperature=" .. tostring(request_options.temperature),
 	}
-
-	-- Add optional parameters
 	if request_options.language then
-		table.insert(curl_cmd, "-F")
-		table.insert(curl_cmd, "language=" .. request_options.language)
+		table.insert(curl_args, "--form")
+		table.insert(curl_args, "language=" .. request_options.language)
 	end
 
-	table.insert(curl_cmd, "-F")
-	table.insert(curl_cmd, "response_format=" .. request_options.response_format)
+	M.debug_log("Curl arguments:", curl_args)
 
-	table.insert(curl_cmd, "-F")
-	table.insert(curl_cmd, "temperature=" .. request_options.temperature)
-
-	-- Add API endpoint
-	table.insert(curl_cmd, "https://api.openai.com/v1/audio/transcriptions")
-
-	debug_log("Curl command:", curl_cmd)
-
-	-- Execute the API request asynchronously
-	Job:new({
-		command = curl_cmd[1],
-		args = { unpack(curl_cmd, 2) },
-		on_exit = function(j, return_val)
-			-- Always schedule callbacks to run in the main Neovim loop
-			vim.schedule(function()
-				local stderr_result = table.concat(j:stderr_result(), "\n")
-				local result = table.concat(j:result(), "\n")
-
-				debug_log("API response code:", return_val)
-				debug_log("API stderr:", stderr_result)
-				debug_log("API response:", result)
-
-				if return_val ~= 0 then
-					local error_msg = "API request failed with code: " .. return_val .. "\nDetails: " .. stderr_result
-					debug_log("Error: " .. error_msg)
-					on_error(error_msg)
-					return
-				end
-
-				-- Handle empty response
-				if not result or result == "" then
-					local error_msg = "Empty response from API"
-					debug_log("Error: " .. error_msg)
-					on_error(error_msg)
-					return
-				end
-
-				-- Parse JSON response
-				local ok, decoded = pcall(vim.json.decode, result)
-				if not ok or not decoded then
-					local error_msg = "Failed to decode API response: " .. result
-					debug_log("Error: " .. error_msg)
-					on_error(error_msg)
-					return
-				end
-
-				-- Check for API error
-				if decoded.error then
-					local error_msg = "API error: " .. (decoded.error.message or "Unknown API error")
-					debug_log("Error: " .. error_msg)
-					on_error(error_msg)
-					return
-				end
-
-				-- Extract transcription
-				if decoded.text then
-					debug_log("Transcription successful! Length: " .. #decoded.text .. " characters")
-					on_success(decoded.text)
-				else
-					local error_msg = "No transcription found in response"
-					debug_log("Error: " .. error_msg)
-					on_error(error_msg)
-				end
-			end)
-		end,
-		on_stderr = function(_, data)
-			if data and #data > 0 then
-				debug_log("Stderr data:", data)
+	-- Make POST request using plenary.curl with raw arguments
+	curl.post("https://api.openai.com/v1/audio/transcriptions", {
+		raw = curl_args,
+		timeout = request_options.timeout,
+		callback = vim.schedule_wrap(function(response)
+			if not response or not response.status then
+				local error_msg = "Failed to make API request"
+				M.debug_log("Error: " .. error_msg)
+				on_error(error_msg)
+				return
 			end
-		end,
-	}):start()
+			M.debug_log("API response status:", response.status, "Body:", response.body)
+			if response.status ~= 200 then
+				local error_msg = "API request failed with status: " .. response.status
+				M.debug_log("Error: " .. error_msg)
+				on_error(error_msg)
+				return
+			end
+			if not response.body or response.body == "" then
+				local error_msg = "Empty response from API"
+				M.debug_log("Error: " .. error_msg)
+				on_error(error_msg)
+				return
+			end
+			local ok, decoded = pcall(vim.json.decode, response.body)
+			if not ok or not decoded then
+				local error_msg = "Failed to decode API response: " .. response.body
+				M.debug_log("Error: " .. error_msg)
+				on_error(error_msg)
+				return
+			end
+			if decoded.error then
+				local error_msg = "API error: " .. (decoded.error.message or "Unknown API error")
+				M.debug_log("Error: " .. error_msg)
+				on_error(error_msg)
+				return
+			end
+			if decoded.text then
+				M.debug_log("Transcription successful! Length: " .. #decoded.text .. " characters")
+				on_success(decoded.text)
+			else
+				local error_msg = "No transcription found in response"
+				M.debug_log("Error: " .. error_msg)
+				on_error(error_msg)
+			end
+		end),
+	})
 end
 
--- Set API options
----@param opts table Configuration options
+function M.test_api_connectivity(api_key, callback)
+	local was_debug_enabled = M.debug_mode
+	M.debug_mode = true
+	M.debug_log("======== API CONNECTIVITY TEST ========")
+	M.debug_log("Testing API connectivity with key: " .. api_key:sub(1, 5) .. "..." .. api_key:sub(-4))
+	local command =
+		string.format("curl -s -X GET -H 'Authorization: Bearer %s' https://api.openai.com/v1/models", api_key)
+	vim.fn.jobstart(command, {
+		on_stdout = function(_, data)
+			if data and #data > 0 and data[1] ~= "" then
+				local combined_data = table.concat(data, "\n")
+				M.debug_log("API Response: " .. combined_data)
+				local success, decoded = pcall(vim.json.decode, combined_data)
+				if success and decoded.data then
+					callback("API connection successful!", "info")
+					M.debug_log("Success: Found " .. #decoded.data .. " models")
+				elseif success and decoded.error then
+					callback("API error: " .. (decoded.error.message or "Unknown error"), "error")
+					M.debug_log("Error: " .. (decoded.error.message or "Unknown error"))
+				else
+					callback("Failed to decode API response", "error")
+					M.debug_log("Error: Failed to decode API response")
+				end
+			end
+		end,
+		on_stderr = function(_, data)
+			if data and #data > 0 and data[1] ~= "" then
+				local error_msg = table.concat(data, "\n")
+				M.debug_log("Error: " .. error_msg)
+				callback("API connection failed: " .. error_msg, "error")
+			end
+		end,
+		on_exit = function(_, code)
+			if code ~= 0 then
+				M.debug_log("Error: API test failed with code: " .. code)
+				callback("API test failed with code: " .. code, "error")
+			end
+			M.debug_mode = was_debug_enabled
+			M.debug_log("======== API TEST COMPLETE ========")
+		end,
+	})
+end
+
 function M.set_options(opts)
 	M.options = vim.tbl_deep_extend("force", M.options, opts or {})
 end
 
--- Enable debug mode
 function M.enable_debug()
 	M.debug_mode = true
-
-	-- Create a header in the log file
 	local file = io.open(M.log_file, "a")
 	if file then
 		file:write("\n\n======== DEBUG MODE ENABLED AT " .. os.date("%Y-%m-%d %H:%M:%S") .. " ========\n")
 		file:close()
 	end
-
 	vim.notify("Vocal plugin debug mode enabled - Logging to " .. M.log_file, vim.log.levels.INFO)
 end
 
--- Disable debug mode
 function M.disable_debug()
-	-- Log debug session end
 	if M.debug_mode then
 		local file = io.open(M.log_file, "a")
 		if file then
@@ -246,7 +237,6 @@ function M.disable_debug()
 			file:close()
 		end
 	end
-
 	M.debug_mode = false
 	vim.notify("Vocal plugin debug mode disabled", vim.log.levels.INFO)
 end

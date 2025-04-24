@@ -1,119 +1,80 @@
--- File: lua/vocal/ui.lua
 local M = {}
 
--- Status window state
-local status_win = nil
-local status_buf = nil
-local status_timer = nil
-local default_width = 30
+local status_win_id = nil
+local status_bufnr = nil
+local spinner_timer = nil
+local spinner_frames = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
+local current_frame = 1
 
-function M.create_status_window()
-	if status_win and vim.api.nvim_win_is_valid(status_win) then
-		vim.api.nvim_win_close(status_win, true)
+local function close_window()
+	if spinner_timer then
+		vim.loop.timer_stop(spinner_timer)
+		spinner_timer = nil
 	end
-	status_win = nil
-	status_buf = nil
-	status_buf = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_buf_set_option(status_buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(status_buf, "buftype", "nofile")
-	vim.api.nvim_buf_set_option(status_buf, "swapfile", false)
-	vim.api.nvim_buf_set_option(status_buf, "filetype", "vocal-status")
-	local width = default_width
-	local height = 1
-	local row = math.max(0, vim.o.lines - height - 4)
-	local col = math.max(0, vim.o.columns - width - 2)
-	status_win = vim.api.nvim_open_win(status_buf, false, {
-		relative = "editor",
-		width = width,
-		height = height,
-		row = row,
-		col = col,
-		style = "minimal",
-		border = "none",
-		focusable = false,
-	})
-	if not status_win or not vim.api.nvim_win_is_valid(status_win) then
-		return false
+	if status_win_id and vim.api.nvim_win_is_valid(status_win_id) then
+		vim.api.nvim_win_close(status_win_id, true)
 	end
-	vim.api.nvim_win_set_option(status_win, "winblend", 0)
-	vim.api.nvim_win_set_option(status_win, "winhighlight", "Normal:VocalStatus,FloatBorder:VocalStatusBorder")
-	if vim.fn.hlexists("VocalStatus") == 0 then
-		vim.api.nvim_set_hl(0, "VocalStatus", { bg = "#2a2a2a", fg = "#ffffff" })
-	end
-	if vim.fn.hlexists("VocalStatusBorder") == 0 then
-		vim.api.nvim_set_hl(0, "VocalStatusBorder", { bg = "#2a2a2a", fg = "#2a2a2a" })
-	end
-	vim.api.nvim_buf_set_lines(status_buf, 0, -1, false, { "📡 Initializing..." })
-	return true
+	status_win_id = nil
+	status_bufnr = nil
 end
 
-function M.update_status(text, auto_close_delay)
-	vim.schedule(function()
-		if not status_win or not vim.api.nvim_win_is_valid(status_win) then
-			local success = M.create_status_window()
-			if not success then
-				vim.notify(text, vim.log.levels.INFO)
-				return
-			end
-		end
-		local width = default_width
-		if status_win and vim.api.nvim_win_is_valid(status_win) then
-			width = vim.api.nvim_win_get_width(status_win)
-		end
-		local clean_text = text:gsub("\n", " "):gsub("\r", " ")
-		local first_line = clean_text:match("^[^\n]*") or clean_text
-		local padding = math.floor((width - vim.fn.strwidth(first_line)) / 2)
-		local padded_text = string.rep(" ", math.max(0, padding)) .. first_line
-		if status_buf and vim.api.nvim_buf_is_valid(status_buf) then
-			vim.api.nvim_buf_set_lines(status_buf, 0, -1, false, { padded_text })
-		end
-		if status_timer then
-			vim.fn.timer_stop(status_timer)
-			status_timer = nil
-		end
-		if auto_close_delay and auto_close_delay > 0 then
-			status_timer = vim.fn.timer_start(auto_close_delay, function()
-				M.close_status_window()
-			end)
-		end
-	end)
+local function create_or_update_window(text)
+	if not status_bufnr or not vim.api.nvim_buf_is_valid(status_bufnr) then
+		status_bufnr = vim.api.nvim_create_buf(false, true)
+	end
+	vim.api.nvim_buf_set_lines(status_bufnr, 0, -1, false, { text })
+	if not status_win_id or not vim.api.nvim_win_is_valid(status_win_id) then
+		local win_config = {
+			relative = "editor",
+			width = 30,
+			height = 1,
+			row = vim.o.lines - 2,
+			col = vim.o.columns - 32,
+			style = "minimal",
+			border = "none",
+		}
+		status_win_id = vim.api.nvim_open_win(status_bufnr, false, win_config)
+	else
+		vim.api.nvim_win_set_buf(status_win_id, status_bufnr)
+	end
 end
 
-function M.close_status_window()
-	vim.schedule(function()
-		if status_timer then
-			vim.fn.timer_stop(status_timer)
-			status_timer = nil
-		end
-		if status_win and vim.api.nvim_win_is_valid(status_win) then
-			vim.api.nvim_win_close(status_win, true)
-		end
-		status_win = nil
-		status_buf = nil
-	end)
+function M.show_recording_status()
+	create_or_update_window("󰑊 Recording")
 end
 
-function M.show_spinner(message, spinner_frames)
-	local spinner_idx = 1
-	local function animate()
-		vim.schedule(function()
-			if status_win and vim.api.nvim_win_is_valid(status_win) then
-				local frame = spinner_frames[spinner_idx] or ""
-				local text = frame .. " " .. message
-				M.update_status(text)
-				spinner_idx = (spinner_idx % #spinner_frames) + 1
-			end
+function M.start_transcribing_status()
+	current_frame = 1
+	create_or_update_window(spinner_frames[current_frame] .. " Transcribing")
+	spinner_timer = vim.loop.new_timer()
+	spinner_timer:start(
+		100,
+		100,
+		vim.schedule_wrap(function()
+			current_frame = (current_frame % #spinner_frames) + 1
+			create_or_update_window(spinner_frames[current_frame] .. " Transcribing")
 		end)
-	end
-	local timer_id
-	timer_id = vim.fn.timer_start(100, function()
-		animate()
-	end, { ["repeat"] = -1 })
-	return timer_id
+	)
 end
 
-function M.show_debug_status()
-	M.update_status("🔍 Status window visible", 5000)
+function M.show_error_status(message)
+	close_window()
+	create_or_update_window("✗ " .. message)
+	vim.defer_fn(function()
+		M.hide_status()
+	end, 3000)
+end
+
+function M.show_success_status(message)
+	close_window()
+	create_or_update_window("✓ " .. message)
+	vim.defer_fn(function()
+		M.hide_status()
+	end, 2000)
+end
+
+function M.hide_status()
+	close_window()
 end
 
 return M
