@@ -1,0 +1,39 @@
+commit 6edbf65ade29468561a3adf59e527d4f18125f11
+Author: Kyza <contact@kyza.dev>
+Date:   Wed Apr 23 23:38:51 2025 -0400
+
+    docs(vocal): correct username in documentation
+
+diff --git a/README.md b/README.md
+index bd0c9f7..de7cfbe 100644
+--- a/README.md
++++ b/README.md
+@@ -27,7 +27,7 @@ A lightweight Neovim plugin for speech-to-text transcription using the OpenAI Wh
+ 
+ ```lua
+ {
+-  "kyza/vocal.nvim",
++  "kyza0d/vocal.nvim",
+   dependencies = {
+     "nvim-lua/plenary.nvim",
+   },
+diff --git a/doc/vocal.txt b/doc/vocal.txt
+index 8cad933..e49b394 100644
+--- a/doc/vocal.txt
++++ b/doc/vocal.txt
+@@ -37,7 +37,7 @@ The following are required to use vocal.nvim:
+ Using lazy.nvim:
+ >lua
+     {
+-      "kyza/vocal.nvim",
++      "kyza0d/vocal.nvim",
+       dependencies = {
+         "nvim-lua/plenary.nvim",
+       },
+@@ -154,4 +154,4 @@ Common issues:
+ MIT
+ 
+ ===============================================================================
+-vim:tw=78:ts=8:ft=help:norl:
+\ No newline at end of file
++vim:tw=78:ts=8:ft=help:norl:

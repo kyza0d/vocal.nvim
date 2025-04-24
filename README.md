@@ -26,14 +26,10 @@ A lightweight Neovim plugin for speech-to-text transcription using the OpenAI Wh
 ### Using lazy.nvim
 
 ```lua
-{
-  "kyza0d/vocal.nvim",
-  dependencies = {
-    "nvim-lua/plenary.nvim",
-  },
-  opts = {}
-}
+{ "kyza0d/vocal.nvim", dependencies = { "nvim-lua/plenary.nvim" }, opts = {} }
 ```
+
+## Configuration
 
 ## Configuration
 
@@ -48,6 +44,9 @@ require("vocal").setup({
   -- Delete recordings after transcription
   delete_recordings = true,
   
+  -- Keybinding to trigger :Vocal (set to nil to disable)
+  keymap = "<leader>v",
+  
   -- API configuration
   api = {
     model = "whisper-1",
@@ -57,7 +56,6 @@ require("vocal").setup({
     timeout = 60,
   },
 })
-```
 
 ## Dependencies
 
