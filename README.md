@@ -8,26 +8,32 @@ A lightweight Neovim plugin for speech-to-text transcription using OpenAI Whispe
 
 ## Features
 
-- Record audio using the `:Vocal` command
+- Record audio using the `:Vocal` command or configurable keymap
 - Transcribe speech with OpenAI Whisper API or local models
 - Insert transcriptions at cursor position or replace selected text
 - Simple status indicators during recording and processing
 - Asynchronous operation to keep Neovim responsive
 - Support for local Whisper models (no API key needed)
 
-## Installation
-
-### Requirements
+## Requirements
 
 - Neovim 0.11.0+
 - `sox` for audio recording
 - For API transcription: OpenAI API key
-- For local transcription: Python with `whisper` package
+- For local transcription: Python with `openai-whisper` package
+
+## Installation
 
 ### Using lazy.nvim
 
 ```lua
-{ "kyza0d/vocal.nvim", dependencies = { "nvim-lua/plenary.nvim" }, opts = {} }
+{
+  "kyza0d/vocal.nvim",
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+  },
+  opts = {}
+}
 ```
 
 ## Configuration
@@ -63,15 +69,34 @@ require("vocal").setup({
 })
 ```
 
-## Dependencies
+## Usage
 
-- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim): Required for asynchronous operations and curl
-- `sox`: Command-line audio recording utility (must be installed separately)
-- For local transcription: `pip install openai-whisper` 
+1. Start recording with the `:Vocal` command or configured keymap
+2. Speak into your microphone
+3. Run `:Vocal` again to stop recording and transcribe
+4. The transcribed text will be inserted at your cursor position
 
-This plugin was inspired by the following projects:
-- [murmur.nvim](https://github.com/mecattaf/murmur.nvim)
-- [gp.nvim](https://github.com/Robitx/gp.nvim)
+In visual mode, transcribed text will replace the selected text.
+
+## Current Status
+
+- Local model transcription is the default and works on Linux
+- API transcription has issues and still needs work
+- Windows support is currently not working correctly
+- Mac support has not been fully tested
+
+## Troubleshooting
+
+- "sox is not installed": Install sox on your system
+  - Ubuntu/Debian: `sudo apt install sox`
+  - macOS: `brew install sox`
+  - Windows: Install through chocolatey or directly
+
+- "API key not found": Set your OpenAI API key in the configuration or
+  as the OPENAI_API_KEY environment variable (only needed for API transcription)
+
+- "Python package not found": Install the openai-whisper package with
+  `pip install openai-whisper` (only needed for local transcription)
 
 ## License
 
