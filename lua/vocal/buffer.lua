@@ -1,40 +1,30 @@
+--- @return string Formatted string
+local fmt = require("vocal.utils").fmt
+
 local M = {}
 
--- Insert text at cursor position in normal mode
----@param text string Text to insert
+--- Inserts text at cursor in normal mode
+--- @param text string Text to insert
 function M.insert_at_cursor(text)
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local cur_line = vim.api.nvim_get_current_line()
+  local start, finish = cur_line:sub(1, col), cur_line:sub(col + 1)
+
   if text:find("\n") then
     local lines = vim.split(text, "\n")
-    local line_num, col = unpack(vim.api.nvim_win_get_cursor(0))
-    local current_line = vim.api.nvim_get_current_line()
-    local line_start = string.sub(current_line, 1, col)
-    local line_end = string.sub(current_line, col + 1)
-
-    vim.api.nvim_set_current_line(line_start .. lines[1])
-
-    local new_lines = {}
-    for i = 2, #lines - 1 do
-      table.insert(new_lines, lines[i])
-    end
-
-    table.insert(new_lines, lines[#lines] .. line_end)
-
-    vim.api.nvim_buf_set_lines(0, line_num, line_num, false, new_lines)
-    vim.api.nvim_win_set_cursor(0, { line_num + #new_lines, #lines[#lines] })
+    vim.api.nvim_set_current_line(fmt("%s%s", start, lines[1]))
+    local new_lines = { unpack(lines, 2, #lines - 1) }
+    new_lines[#new_lines + 1] = fmt("%s%s", lines[#lines], finish)
+    vim.api.nvim_buf_set_lines(0, line, line, false, new_lines)
+    vim.api.nvim_win_set_cursor(0, { line + #new_lines, #lines[#lines] })
   else
-    local line, col = unpack(vim.api.nvim_win_get_cursor(0))
-    local current_line = vim.api.nvim_get_current_line()
-    local line_start = string.sub(current_line, 1, col)
-    local line_end = string.sub(current_line, col + 1)
-    local new_line = line_start .. text .. line_end
-    vim.api.nvim_set_current_line(new_line)
-    local new_col = col + #text
-    vim.api.nvim_win_set_cursor(0, { line, new_col })
+    vim.api.nvim_set_current_line(fmt("%s%s%s", start, text, finish))
+    vim.api.nvim_win_set_cursor(0, { line, col + #text })
   end
 end
 
--- Insert text at cursor
----@param text string Text to insert
+--- Inserts text at cursor
+--- @param text string Text to insert
 function M.insert_text(text) M.insert_at_cursor(text) end
 
 return M

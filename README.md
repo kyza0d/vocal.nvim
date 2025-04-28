@@ -85,6 +85,25 @@ In visual mode, transcribed text will replace the selected text.
 - Windows support is currently not working correctly
 - Mac support has not been fully tested
 
+## Development
+
+### Testing
+
+The plugin includes basic tests to verify functionality:
+
+```bash
+# Install plenary.nvim (required for tests)
+mkdir -p ~/.local/share/nvim/site/pack/packer/start
+git clone https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/site/pack/packer/start/plenary.nvim
+
+# Run all tests
+./run_tests.sh
+
+# Run specific test
+./run_tests.sh init  # Basic initialization test
+./run_tests.sh mock  # Mock transcription test
+```
+
 ## Troubleshooting
 
 - "sox is not installed": Install sox on your system
