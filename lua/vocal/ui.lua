@@ -106,13 +106,15 @@ local function create_or_update_window(text, highlight_ranges)
     vim.api.nvim_buf_set_option(status_bufnr, "buftype", "nofile")
   end
 
-  vim.api.nvim_buf_set_lines(status_bufnr, 0, -1, false, { text })
+  -- Remove any newlines from text to ensure it's a single line
+  local sanitized_text = text:gsub("\n", " ")
+  vim.api.nvim_buf_set_lines(status_bufnr, 0, -1, false, { sanitized_text })
 
   local win_config = {
     relative = "editor",
-    width = #text,
+    width = #sanitized_text,
     height = 1,
-    col = vim.o.columns - #text - 2,
+    col = vim.o.columns - #sanitized_text - 2,
     row = vim.o.lines - 2,
     style = "minimal",
     border = "none",

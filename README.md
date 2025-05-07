@@ -22,9 +22,10 @@ A lightweight Neovim plugin for speech-to-text transcription using OpenAI Whispe
 - For API transcription: OpenAI API key
 - For local transcription: Python with `openai-whisper` package
 
-## Installation
 
-### Using lazy.nvim
+### Installation
+
+#### Using lazy.nvim
 
 ```lua
 {
@@ -36,28 +37,34 @@ A lightweight Neovim plugin for speech-to-text transcription using OpenAI Whispe
 }
 ```
 
-## Configuration
+#### For Arch Linux
 
+```sh
+sudo pacman -S sox python-openai-whisper
+```
+
+
+# Configuration
 ```lua
 require("vocal").setup({
   -- API key (string, table with command, or nil to use OPENAI_API_KEY env var)
   api_key = nil,
-  
+
   -- Directory to save recordings
   recording_dir = os.getenv("HOME") .. "/recordings",
-  
+
   -- Delete recordings after transcription
   delete_recordings = true,
-  
+
   -- Keybinding to trigger :Vocal (set to nil to disable)
   keymap = "<leader>v",
-  
+
   -- Local model configuration (set this to use local model instead of API)
   local_model = {
     model = "base",       -- Model size: tiny, base, small, medium, large
     path = "~/whisper",   -- Path to download and store models
   },
-  
+
   -- API configuration (used only when local_model is not set)
   api = {
     model = "whisper-1",
@@ -78,31 +85,15 @@ require("vocal").setup({
 
 In visual mode, transcribed text will replace the selected text.
 
+# Installation
+
+
 ## Current Status
 
 - Local model transcription is the default and works on Linux
 - API transcription has issues and still needs work
 - Windows support is currently not working correctly
 - Mac support has not been fully tested
-
-## Development
-
-### Testing
-
-The plugin includes basic tests to verify functionality:
-
-```bash
-# Install plenary.nvim (required for tests)
-mkdir -p ~/.local/share/nvim/site/pack/packer/start
-git clone https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/site/pack/packer/start/plenary.nvim
-
-# Run all tests
-./run_tests.sh
-
-# Run specific test
-./run_tests.sh init  # Basic initialization test
-./run_tests.sh mock  # Mock transcription test
-```
 
 ## Troubleshooting
 
