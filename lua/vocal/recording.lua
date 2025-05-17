@@ -52,12 +52,13 @@ function M.start_recording(recording_dir, on_start, on_error)
     end,
     on_stderr = function(_, data)
       if data and #data > 0 and data[1] ~= "" then
-        local msg = table.concat(data, "\n")
+        local msg = type(data) == "table" and table.concat(data, "\n") or data
         if
           not msg:match("ALSA")
           and not msg:match("warning")
           and not msg:match("rate")
           and not msg:match("format")
+          and not msg:match("can't encode 0%-bit Unknown or not applicable")
         then
           api.debug_log("Recording stderr:", msg)
           if on_error then on_error(fmt("Recording error: %s", msg)) end

@@ -66,10 +66,16 @@ local function close_window()
     vim.loop.timer_stop(duration_timer)
     duration_timer = nil
   end
-  if status_win_id and vim.api.nvim_win_is_valid(status_win_id) then
-    vim.api.nvim_win_close(status_win_id, true)
+  if status_win_id then
+    vim.schedule(function()
+      if status_win_id and vim.api.nvim_win_is_valid(status_win_id) then
+        vim.api.nvim_win_close(status_win_id, true)
+      end
+      status_win_id, status_bufnr, recording_start_time, current_duration = nil, nil, nil, 0
+    end)
+  else
+    status_win_id, status_bufnr, recording_start_time, current_duration = nil, nil, nil, 0
   end
-  status_win_id, status_bufnr, recording_start_time, current_duration = nil, nil, nil, 0
 end
 
 --- @param seconds number Duration in seconds
@@ -101,44 +107,46 @@ end
 --- @param text string Text to display
 --- @param highlight_ranges table|nil Table of highlight ranges {start, end, group}
 local function create_or_update_window(text, highlight_ranges)
-  if not status_bufnr or not vim.api.nvim_buf_is_valid(status_bufnr) then
-    status_bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(status_bufnr, "buftype", "nofile")
-  end
-
-  -- Remove any newlines from text to ensure it's a single line
-  local sanitized_text = text:gsub("\n", " ")
-  vim.api.nvim_buf_set_lines(status_bufnr, 0, -1, false, { sanitized_text })
-
-  local win_config = {
-    relative = "editor",
-    width = #sanitized_text,
-    height = 1,
-    col = vim.o.columns - #sanitized_text - 2,
-    row = vim.o.lines - 2,
-    style = "minimal",
-    border = "none",
-    focusable = false,
-  }
-
-  if not status_win_id or not vim.api.nvim_win_is_valid(status_win_id) then
-    status_win_id = vim.api.nvim_open_win(status_bufnr, false, win_config)
-    vim.api.nvim_win_set_option(status_win_id, "winblend", 0)
-    vim.api.nvim_win_set_option(status_win_id, "winhighlight", "Normal:Normal")
-  else
-    vim.api.nvim_win_set_config(status_win_id, win_config)
-  end
-
-  vim.api.nvim_buf_clear_namespace(status_bufnr, -1, 0, -1)
-
-  if highlight_ranges then
-    for _, hl_range in ipairs(highlight_ranges) do
-      local start_col, end_col = math.floor(hl_range[1]), math.floor(hl_range[2])
-      local hl_group = hl_range[3]
-
-      vim.api.nvim_buf_add_highlight(status_bufnr, -1, hl_group, 0, start_col, end_col)
+  vim.schedule(function()
+    if not status_bufnr or not vim.api.nvim_buf_is_valid(status_bufnr) then
+      status_bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_option(status_bufnr, "buftype", "nofile")
     end
-  end
+
+    -- Remove any newlines from text to ensure it's a single line
+    local sanitized_text = text:gsub("\n", " ")
+    vim.api.nvim_buf_set_lines(status_bufnr, 0, -1, false, { sanitized_text })
+
+    local win_config = {
+      relative = "editor",
+      width = #sanitized_text,
+      height = 1,
+      col = vim.o.columns - #sanitized_text - 2,
+      row = vim.o.lines - 2,
+      style = "minimal",
+      border = "none",
+      focusable = false,
+    }
+
+    if not status_win_id or not vim.api.nvim_win_is_valid(status_win_id) then
+      status_win_id = vim.api.nvim_open_win(status_bufnr, false, win_config)
+      vim.api.nvim_win_set_option(status_win_id, "winblend", 0)
+      vim.api.nvim_win_set_option(status_win_id, "winhighlight", "Normal:Normal")
+    else
+      vim.api.nvim_win_set_config(status_win_id, win_config)
+    end
+
+    vim.api.nvim_buf_clear_namespace(status_bufnr, -1, 0, -1)
+
+    if highlight_ranges then
+      for _, hl_range in ipairs(highlight_ranges) do
+        local start_col, end_col = math.floor(hl_range[1]), math.floor(hl_range[2])
+        local hl_group = hl_range[3]
+
+        vim.api.nvim_buf_add_highlight(status_bufnr, -1, hl_group, 0, start_col, end_col)
+      end
+    end
+  end)
 end
 
 --- Shows recording status
